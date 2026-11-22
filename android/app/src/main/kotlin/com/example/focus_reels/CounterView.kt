@@ -102,7 +102,11 @@ class CounterView(ctx: Context) : View(ctx) {
     private var ring = 32f * d
     private var margin = 8f * d // room around the pill so the pop animation is not clipped by the window
 
-    init { applyStyle("dark", 92, 100, true, true) }
+    init {
+        // Some phones (Samsung) auto-darken light overlays, which would turn the Light, Glass and Colour looks dark.
+        if (android.os.Build.VERSION.SDK_INT >= 29) isForceDarkAllowed = false
+        applyStyle("dark", 92, 100, true, true)
+    }
 
     /** Applies the user's look. [opacityPct] 20..100, [sizePct] 70..150. */
     fun applyStyle(styleName: String, opacityPct: Int, sizePct: Int, label: Boolean, ringOn: Boolean) {
