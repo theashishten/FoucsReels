@@ -12,6 +12,7 @@ import 'setup.dart';
 import 'social.dart';
 import 'theme.dart';
 import 'updater.dart';
+import 'counter_style.dart';
 
 void main() => runApp(const FocusReelsApp());
 
@@ -924,6 +925,14 @@ class RulesPage extends StatelessWidget {
           subtitle: 'Off: swiping back to a reel you already saw does not add to the count (Instagram, YouTube, Snapchat, Netflix)',
           value: cfg['countBack'] == true,
           onChanged: (v) => set('countBack', v),
+        ),
+        Tile(
+          icon: Icons.palette_outlined,
+          title: 'Counter style',
+          subtitle: 'Dark, light, glass, transparent or colour. Size and opacity too',
+          trailing: Icon(Icons.chevron_right, color: cs.onSurfaceVariant),
+          onTap: () => Navigator.of(context).push(MaterialPageRoute(
+              builder: (_) => CounterStylePage(cfg: cfg, save: save))),
         ),
         Tile(
           icon: Icons.open_with,

@@ -541,6 +541,10 @@ class ReelsAccessibilityService : AccessibilityService() {
             applyBubblePosition(lp, cfg)
             if (lp.x != ox || lp.y != oy) try { wm.updateViewLayout(view, lp) } catch (_: Exception) {}
         }
+        view.applyStyle(
+            cfg.optString("counterStyle", "dark"), cfg.optInt("counterOpacity", 92), cfg.optInt("counterSize", 100),
+            cfg.optBoolean("counterLabel", true), cfg.optBoolean("counterRing", true)
+        )
         view.set(total, frac, caption, color)
         handler.removeCallbacks(hideBubble)
         handler.postDelayed(hideBubble, 4000)
