@@ -13,10 +13,11 @@ class CounterStylePage extends StatefulWidget {
 }
 
 const _styles = <String, List<String>>{
+  'liquid': ['Liquid glass', 'Frosted glass with a bright edge. Easy to read on any video'],
   'dark': ['Dark', 'Solid dark pill'],
   'light': ['Light', 'Solid white pill'],
-  'glass': ['Glass', 'See-through frosted pill'],
-  'clear': ['Transparent', 'No background, just the ring and number'],
+  'glass': ['Glass', 'Smoky see-through pill'],
+  'clear': ['Transparent', 'No background, text with a dark outline'],
   'colour': ['Colour', 'Filled with the ring colour'],
 };
 
@@ -139,13 +140,18 @@ class _CounterStylePageState extends State<CounterStylePage> {
         edge = const Color(0x22000000);
         break;
       case 'glass':
-        fill = const Color(0x66FFFFFF);
-        sub = const Color(0xFFE8E8EE);
-        edge = const Color(0x55FFFFFF);
+        fill = const Color(0x66181820);
+        sub = const Color(0xFFF2F2F7);
+        edge = const Color(0x66FFFFFF);
+        break;
+      case 'liquid':
+        fill = const Color(0x7A0E0E12);
+        sub = const Color(0xFFF2F2F7);
+        edge = const Color(0xBFFFFFFF);
         break;
       case 'clear':
         fill = const Color(0x00000000);
-        sub = const Color(0xFFF0F0F5);
+        sub = Colors.white;
         edge = null;
         break;
       case 'colour':
@@ -158,8 +164,10 @@ class _CounterStylePageState extends State<CounterStylePage> {
     }
     Color fade(Color c) => c.withValues(alpha: c.a * a);
     final shadow = style == 'clear'
-        ? const [Shadow(blurRadius: 4, color: Color(0xCC000000), offset: Offset(0, 1))]
-        : null;
+        ? const [Shadow(blurRadius: 5, color: Color(0xFF000000), offset: Offset(0, 1)), Shadow(blurRadius: 5, color: Color(0xFF000000), offset: Offset(0, 1))]
+        : (style == 'glass' || style == 'liquid')
+            ? const [Shadow(blurRadius: 2.5, color: Color(0xFF000000), offset: Offset(0, 1))]
+            : null;
     final ringSize = 32.0 * scale;
     return Container(
       height: 190,

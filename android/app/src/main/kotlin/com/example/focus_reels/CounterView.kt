@@ -31,6 +31,9 @@ class CounterView(ctx: Context) : View(ctx) {
     private var edgeColor = Color.parseColor("#33FFFFFF")
 
     private val edge = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE }
+    private val rim = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE }
+    private val sheen = Paint(Paint.ANTI_ALIAS_FLAG)
+    private val under = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE; color = 0x73000000 }
     private val track = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE }
     private val arc = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.STROKE; strokeCap = Paint.Cap.ROUND
@@ -121,26 +124,44 @@ class CounterView(ctx: Context) : View(ctx) {
         var fill = 0xFF151114.toInt()
         when (style) {
             "light" -> { fill = 0xFFFFFFFF.toInt(); textColor = Color.parseColor("#1B1B1F"); subColor = Color.parseColor("#5F5A63"); edgeColor = 0x22000000 }
-            "glass" -> { fill = 0x66FFFFFF; textColor = Color.WHITE; subColor = Color.parseColor("#E8E8EE"); edgeColor = 0x55FFFFFF }
-            "clear" -> { fill = 0; textColor = Color.WHITE; subColor = Color.parseColor("#F0F0F5"); edgeColor = 0 }
+            "glass" -> { fill = 0x4D000000; textColor = Color.WHITE; subColor = Color.parseColor("#F2F2F7"); edgeColor = 0x66FFFFFF }
+            "liquid" -> { fill = 0x7A0E0E12; textColor = Color.WHITE; subColor = Color.parseColor("#F2F2F7"); edgeColor = 0 }
+            "clear" -> { fill = 0; textColor = Color.WHITE; subColor = Color.WHITE; edgeColor = 0 }
             "colour" -> { fill = accent; textColor = Color.parseColor("#151110"); subColor = Color.parseColor("#2B2220"); edgeColor = 0 }
             else -> { textColor = Color.WHITE; subColor = Color.parseColor("#CFC4BD"); edgeColor = 0x33FFFFFF }
         }
         num.color = textColor
         lab.color = subColor
         lab.textSize = 12f * d
-        val shadow = style == "clear"
-        num.setShadowLayer(if (shadow) 4f * d else 0f, 0f, 1f * d, 0xCC000000.toInt())
-        lab.setShadowLayer(if (shadow) 4f * d else 0f, 0f, 1f * d, 0xCC000000.toInt())
+        // Text sits straight on the video in these looks, so give it a dark halo that works on light and dark scenes.
+        val halo = when (style) { "clear" -> 5f * d; "glass", "liquid" -> 2.5f * d; else -> 0f }
+        num.setShadowLayer(halo, 0f, 1f * d, 0xFF000000.toInt())
+        lab.setShadowLayer(halo, 0f, 1f * d, 0xFF000000.toInt())
         track.strokeWidth = 3f * d
         track.color = if (style == "light") 0x1F000000 else if (style == "colour") 0x33000000 else 0x2EFFFFFF
         arc.strokeWidth = 3f * d
         edge.strokeWidth = 1f * d
-        val pill = android.graphics.drawable.GradientDrawable().apply {
-            shape = android.graphics.drawable.GradientDrawable.RECTANGLE
+        fun shape() = android.graphics.drawable.GradientDrawable().apply {
+            this.shape = android.graphics.drawable.GradientDrawable.RECTANGLE
             cornerRadius = 100f * d
-            setColor(a(fill))
-            if (edgeColor != 0) setStroke((1f * d).toInt().coerceAtLeast(1), a(edgeColor))
+        }
+        val pill: android.graphics.drawable.Drawable = when (style) {
+            // Smoky base keeps white text readable on any video, with a light sheen on top for the glass look.
+            "glass" -> android.graphics.drawable.LayerDrawable(arrayOf(
+                shape().apply { setColor(a(fill)) },
+                shape().apply { setColor(a(0x33FFFFFF)); setStroke((1f * d).toInt().coerceAtLeast(1), a(edgeColor)) }
+            ))
+            "liquid" -> android.graphics.drawable.LayerDrawable(arrayOf(
+                shape().apply { setColor(a(fill)) },
+                shape().apply {
+                    orientation = android.graphics.drawable.GradientDrawable.Orientation.TOP_BOTTOM
+                    colors = intArrayOf(a(0x4DFFFFFF), a(0x0DFFFFFF))
+                }
+            ))
+            else -> shape().apply {
+                setColor(a(fill))
+                if (edgeColor != 0) setStroke((1f * d).toInt().coerceAtLeast(1), a(edgeColor))
+            }
         }
         val m = margin.toInt()
         background = android.graphics.drawable.InsetDrawable(pill, m, m, m, m)
@@ -185,8 +206,32 @@ class CounterView(ctx: Context) : View(ctx) {
         val cx = r.left + 5f * d + ring / 2
         val cy = r.centerY()
         val ringRect = RectF(cx - ring / 2 + 2f * d, cy - ring / 2 + 2f * d, cx + ring / 2 - 2f * d, cy + ring / 2 - 2f * d)
+        if (style == "liquid") {
+            // Bright edge that fades around the pill, plus a soft highlight along the top: the "liquid glass" look.
+            val al = (255 * opacity).toInt()
+            rim.strokeWidth = 1.3f * d
+            rim.shader = android.graphics.LinearGradient(
+                r.left, r.top, r.right, r.bottom,
+                intArrayOf(0xF2FFFFFF.toInt(), 0x24FFFFFF, 0x33FFFFFF, 0xB8FFFFFF.toInt()),
+                floatArrayOf(0f, 0.42f, 0.62f, 1f), android.graphics.Shader.TileMode.CLAMP
+            )
+            rim.alpha = al
+            val ri = RectF(r).apply { inset(0.7f * d, 0.7f * d) }
+            c.drawRoundRect(ri, pillH / 2, pillH / 2, rim)
+            sheen.shader = android.graphics.LinearGradient(
+                0f, r.top, 0f, r.top + pillH * 0.5f,
+                intArrayOf(0x66FFFFFF, 0x00FFFFFF), null, android.graphics.Shader.TileMode.CLAMP
+            )
+            sheen.alpha = al
+            c.drawRoundRect(RectF(r.left + 5f * d, r.top + 1.8f * d, r.right - 5f * d, r.top + pillH * 0.5f), pillH / 3, pillH / 3, sheen)
+        }
         if (hint) c.drawCircle(cx, cy, ring / 2 + 3f * d, edge.apply { color = accent; strokeWidth = 2f * d })
         if (showRing) {
+            if (style == "clear") {
+                // Dark underlay so the ring stays visible on bright scenes.
+                under.strokeWidth = 5f * d
+                c.drawArc(ringRect, 0f, 360f, false, under)
+            }
             c.drawArc(ringRect, 0f, 360f, false, track)
             arc.color = if (style == "colour") textColor else accent
             c.drawArc(ringRect, -90f, if (frac < 0f) 360f else 360f * frac.coerceIn(0.02f, 1f), false, arc)
@@ -198,10 +243,11 @@ class CounterView(ctx: Context) : View(ctx) {
             count.length == 3 -> 11f * d
             else -> 9f * d
         }
-        c.drawText(count, cx, cy - (num.descent() + num.ascent()) / 2, num)
+        val reps = if (style == "clear") 2 else 1 // drawing twice thickens the dark halo behind the text
+        repeat(reps) { c.drawText(count, cx, cy - (num.descent() + num.ascent()) / 2, num) }
 
         if (label.isNotEmpty()) {
-            c.drawText(label, cx + ring / 2 + 8f * d, cy - (lab.descent() + lab.ascent()) / 2, lab)
+            repeat(reps) { c.drawText(label, cx + ring / 2 + 8f * d, cy - (lab.descent() + lab.ascent()) / 2, lab) }
         }
     }
 }
