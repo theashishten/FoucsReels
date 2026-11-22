@@ -126,6 +126,35 @@ class MainActivity : FlutterActivity() {
                         )
                         result.success(null)
                     }
+                    "getAppVersion" -> {
+                        val pi = packageManager.getPackageInfo(packageName, 0)
+                        @Suppress("DEPRECATION")
+                        val code = if (android.os.Build.VERSION.SDK_INT >= 28) pi.longVersionCode else pi.versionCode.toLong()
+                        result.success(JSONObject().put("name", pi.versionName ?: "").put("code", code).toString())
+                    }
+                    "getUpdateDir" -> {
+                        val dir = java.io.File(cacheDir, "updates").apply { mkdirs() }
+                        // Old downloads are not kept.
+                        dir.listFiles()?.forEach { it.delete() }
+                        result.success(dir.absolutePath)
+                    }
+                    "canInstall" -> result.success(packageManager.canRequestPackageInstalls())
+                    "openInstallSettings" -> {
+                        startActivity(
+                            Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES, android.net.Uri.parse("package:$packageName"))
+                        )
+                        result.success(null)
+                    }
+                    "installApk" -> {
+                        val f = java.io.File(call.arguments as String)
+                        val uri = androidx.core.content.FileProvider.getUriForFile(this, "$packageName.fileprovider", f)
+                        startActivity(
+                            Intent(Intent.ACTION_VIEW)
+                                .setDataAndType(uri, "application/vnd.android.package-archive")
+                                .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_ACTIVITY_NEW_TASK)
+                        )
+                        result.success(null)
+                    }
                     "getPermissions" -> {
                         val pm = getSystemService(android.content.Context.POWER_SERVICE) as android.os.PowerManager
                         val notif = android.os.Build.VERSION.SDK_INT < 33 ||

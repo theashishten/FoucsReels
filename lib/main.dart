@@ -11,6 +11,7 @@ import 'insights.dart';
 import 'setup.dart';
 import 'social.dart';
 import 'theme.dart';
+import 'updater.dart';
 
 void main() => runApp(const FocusReelsApp());
 
@@ -229,6 +230,11 @@ class _ShellState extends State<Shell> with WidgetsBindingObserver {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     refresh().then((_) => soc.refresh());
+    // Look for a new version once per launch (can be switched off in Health).
+    Updates.loadCurrent().then((_) async {
+      await refresh();
+      if (s?.config['autoUpdate'] != false) Updates.check(api: (s?.config['updateApi'] ?? defaultUpdateApi) as String);
+    });
     _timer = Timer.periodic(const Duration(seconds: 2), (_) => refresh());
     _netTimer = Timer.periodic(const Duration(seconds: 10), (_) => soc.refresh());
   }
@@ -382,6 +388,34 @@ class _ShellState extends State<Shell> with WidgetsBindingObserver {
         title: Text(_titles(showFriends)[tab.clamp(0, pages.length - 1)]),
       ),
       body: Column(children: [
+        ValueListenableBuilder<UpdateInfo?>(
+          valueListenable: Updates.available,
+          builder: (context, u, _) => u == null
+              ? const SizedBox.shrink()
+              : Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 4),
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(24),
+                    onTap: () => showUpdateDialog(context, u),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(24),
+                        color: context.cs.secondaryContainer,
+                      ),
+                      child: Row(children: [
+                        Icon(Icons.system_update, color: context.cs.onSecondaryContainer),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Text('Update available: ${u.version}',
+                              style: TextStyle(color: context.cs.onSecondaryContainer, fontWeight: FontWeight.w600)),
+                        ),
+                        Text('Update', style: TextStyle(color: context.cs.onSecondaryContainer, fontWeight: FontWeight.w700)),
+                      ]),
+                    ),
+                  ),
+                ),
+        ),
         if (pm != null && !pm.ready)
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 0, 16, 4),
@@ -1297,6 +1331,32 @@ class HealthPage extends StatelessWidget {
           onTap: () => _ch.invokeMethod('testSummary'),
         ),
       ]),
+      Section('App updates', [
+        Tile(
+          icon: Icons.system_update_alt,
+          title: 'Version ${Updates.current.isEmpty ? '...' : Updates.current}',
+          subtitle: 'Tap to check for a newer version',
+          trailing: Icon(Icons.chevron_right, color: cs.onSurfaceVariant),
+          onTap: () async {
+            toast('Checking...');
+            String? why;
+            final u = await Updates.check(api: (s.config['updateApi'] ?? defaultUpdateApi) as String, error: (m) => why = m);
+            if (!context.mounted) return;
+            if (u != null) {
+              showUpdateDialog(context, u);
+            } else {
+              toast(why ?? 'You have the latest version.');
+            }
+          },
+        ),
+        SwitchTile(
+          icon: Icons.autorenew,
+          title: 'Check automatically',
+          subtitle: 'Looks for a new version when the app opens',
+          value: s.config['autoUpdate'] != false,
+          onChanged: (v) => save({...s.config, 'autoUpdate': v}),
+        ),
+      ], footer: 'New versions come from the Releases page of the project on GitHub. Android always asks you to confirm the install.'),
       Section('Your data', [
         Tile(
           icon: Icons.upload_outlined,
