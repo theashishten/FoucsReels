@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="a11y_description">Detects when you are watching reels in short-video apps so Focus Reels can count and limit them. It only checks which screen is showing; no screen text is read, stored or sent anywhere.</string>
+</resources>
