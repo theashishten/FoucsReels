@@ -13,6 +13,7 @@ import 'social.dart';
 import 'theme.dart';
 import 'updater.dart';
 import 'counter_style.dart';
+import 'guard.dart';
 
 void main() => runApp(const FocusReelsApp());
 
@@ -1340,6 +1341,7 @@ class HealthPage extends StatelessWidget {
           onTap: () => _ch.invokeMethod('testSummary'),
         ),
       ]),
+      BankGuardSection(cfg: s.config, save: save),
       Section('App updates', [
         Tile(
           icon: Icons.system_update_alt,

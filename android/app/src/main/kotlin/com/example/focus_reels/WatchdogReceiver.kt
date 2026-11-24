@@ -14,6 +14,7 @@ class WatchdogReceiver : BroadcastReceiver() {
     override fun onReceive(c: Context, i: Intent) {
         if (i.action == Intent.ACTION_BOOT_COMPLETED) {
             schedule(c)
+            Guard.sync(c)
             return
         }
         if (Store.a11yEnabled(c)) return

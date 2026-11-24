@@ -121,6 +121,11 @@ class ReelsAccessibilityService : AccessibilityService() {
     override fun onAccessibilityEvent(e: AccessibilityEvent?) {
         e ?: return
         val pkg = e.packageName?.toString() ?: return
+        // A banking app came to the front: switch ourselves off at once so its security check passes.
+        if (Guard.enabled(this) && pkg in Guard.banks(this)) {
+            Guard.pauseNow(this, pkg)
+            return
+        }
         trackScreen(pkg, e.eventType)
         if (screenOn && checkTimer(pkg)) return
         if (pkg in Engine.BROWSERS) {
@@ -1009,7 +1014,8 @@ class ReelsAccessibilityService : AccessibilityService() {
         val extra = timers?.keys()?.asSequence()?.filter { timers.optInt(it, 0) > 0 }?.toList() ?: emptyList()
         val bc = Store.config(this)
         val browsers = if (bc.optBoolean("blockBrowser", false) || bc.optBoolean("countBrowser", false)) Engine.BROWSERS.keys.toList() else emptyList()
-        info.packageNames = (Engine.TARGETS + extra + browsers).distinct().toTypedArray()
+        val banks = if (Guard.enabled(this)) Guard.banks(this).toList() else emptyList()
+        info.packageNames = (Engine.TARGETS + extra + browsers + banks).distinct().toTypedArray()
         serviceInfo = info
         timerCheckedAt.clear()
         curPkg = null

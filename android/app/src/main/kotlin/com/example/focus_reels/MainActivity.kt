@@ -12,6 +12,7 @@ class MainActivity : FlutterActivity() {
         super.configureFlutterEngine(flutterEngine)
         Notifier.scheduleSummary(this)
         WatchdogReceiver.schedule(this)
+        Guard.sync(this)
         // Resume the backup counter if the user turned it on earlier.
         if (Store.config(this).optBoolean("fallback", false) && FallbackService.hasUsageAccess(this)) {
             FallbackService.start(this)
@@ -47,6 +48,7 @@ class MainActivity : FlutterActivity() {
                     "setConfig" -> {
                         Store.put(this, "config", JSONObject(call.arguments as String))
                         ReelsAccessibilityService.instance?.applyScope()
+                        Guard.sync(this)
                         result.success(null)
                     }
                     "setSocial" -> {
@@ -154,6 +156,24 @@ class MainActivity : FlutterActivity() {
                                 .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_ACTIVITY_NEW_TASK)
                         )
                         result.success(null)
+                    }
+                    "getGuardInfo" -> {
+                        val installed = org.json.JSONArray()
+                        Guard.banks(this).forEach { pkg ->
+                            try {
+                                val ai = packageManager.getApplicationInfo(pkg, 0)
+                                installed.put(JSONObject().put("pkg", pkg).put("name", packageManager.getApplicationLabel(ai).toString()))
+                            } catch (_: Exception) {}
+                        }
+                        result.success(
+                            JSONObject()
+                                .put("secure", AccessSwitch.canWrite(this))
+                                .put("usage", FallbackService.hasUsageAccess(this))
+                                .put("installed", installed)
+                                .put("paused", Guard.pausedFor(this))
+                                .put("a11y", Store.a11yEnabled(this))
+                                .toString()
+                        )
                     }
                     "getPermissions" -> {
                         val pm = getSystemService(android.content.Context.POWER_SERVICE) as android.os.PowerManager
